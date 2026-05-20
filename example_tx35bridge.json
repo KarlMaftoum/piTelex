@@ -1,0 +1,43 @@
+{
+    "_comment": "Example piTelex configuration for the tx35bridge device. Pair with the tx35exchd daemon (https://github.com/YOUR-USERNAME/tx35exchd). NOTE: leave the screen device disabled — termios fails under systemd.",
+
+    "devices": {
+        "screen": {
+            "type": "screen",
+            "enable": false
+        },
+
+        "i-Telex": {
+            "type": "i-Telex",
+            "enable": true,
+            "port": 2342,
+            "tns_dynip_number": 0,
+            "tns_pin": 0
+        },
+
+        "tx35bridge": {
+            "type": "tx35bridge",
+            "enable": true,
+            "port": 2343
+        },
+
+        "log": {
+            "type": "log",
+            "enable": true,
+            "filename": "./piTelex.log"
+        },
+
+        "archive": {
+            "type": "archive",
+            "enable": true,
+            "path": "./archive/"
+        }
+    },
+
+    "wru_id": "STATION AA00000",
+    "wru_replace_always": true,
+    "dial_timeout": 2,
+    "continue_with_no_printer": true,
+    "errorlog_path": "./",
+    "welcome_msg": true
+}

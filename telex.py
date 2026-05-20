@@ -264,6 +264,11 @@ def init():
             module = txDevShellCmd.TelexShellCmd(**dev_param)
             DEVICES.append(module)
 
+        elif dev_param['type'] == 'tx35bridge':
+            import txDevTx35Bridge
+            module = txDevTx35Bridge.TelexTx35Bridge(**dev_param)
+            DEVICES.append(module)
+
         elif dev_param['type'] == 'log':
             import txDevLog
             log = txDevLog.TelexLog(**dev_param)
