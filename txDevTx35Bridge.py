@@ -59,6 +59,7 @@ class TelexTx35Bridge(txBase.TelexBase):
         self._rx_buffer = []  # Commands/chars to send to piTelex bus
         self._lock = threading.Lock()
         self._last_feedback_t = 0  # monotonic time of last \x1b~N sent
+        self._print_depth = 0      # daemon-reported TX queue depth (Q command)
 
         # Start listener thread immediately (like other piTelex modules)
         print(f'[TX35 Bridge] Starting on port {self._port}...')
@@ -113,6 +114,7 @@ class TelexTx35Bridge(txBase.TelexBase):
             Bytes 0x20+: command bytes, collected as line until \\n:
                 'D<number>\\n' = dial
                 'S\\n' = stop/clear
+                'Q<depth>\\n' = printer-queue depth (relayed as \\x1b~N)
         """
         self._cmd_buf = ''
         self._in_command = False
@@ -175,7 +177,14 @@ class TelexTx35Bridge(txBase.TelexBase):
             except (socket.error, OSError):
                 break
 
+        # Teardown: reset the depth and push a final ~0 BEFORE the ST.
+        # Critical: if the last feedback piTelex saw was non-zero it parks
+        # in DISCON_TP_WAIT after disconnect and occ-rejects all callers
+        # until a ~0 arrives — which would never come from a dead
+        # connection. The final ~0 guarantees teardown always completes.
+        self._print_depth = 0
         with self._lock:
+            self._rx_buffer.append('\x1b~0')
             self._rx_buffer.append('\x1bST')
         self._client_sock = None
 
@@ -191,6 +200,15 @@ class TelexTx35Bridge(txBase.TelexBase):
                 for digit in number:
                     self._rx_buffer.append(digit)
             time.sleep(2.5)  # piTelex dial watchdog
+
+        elif cmd.startswith('Q'):
+            # Printer-queue depth report from the daemon — relayed to
+            # piTelex as \x1b~N feedback by idle2Hz. Unknown/garbled
+            # values are ignored (keep last known depth).
+            try:
+                self._print_depth = max(0, int(cmd[1:].strip()))
+            except ValueError:
+                log.warning('Bad queue-depth report: %r', cmd)
 
         elif cmd.startswith('S'):
             log.info('Stop request')
@@ -213,16 +231,20 @@ class TelexTx35Bridge(txBase.TelexBase):
         piTelex's ACK counter can advance and remote clients (WinTLX, M100,
         etc.) don't stall with a 'remote printer full' indication.
 
-        We report print_buf_len=0 since the daemon buffers in its own queue
-        and prints asynchronously at 50 baud. Without this feedback, piTelex
-        never learns the banner has been printed and ACK stays at -24.
+        The depth is the daemon's actual TX-queue backlog (reported via the
+        Q command), so remote callers get honest printed-character ACKs
+        instead of "everything printed instantly". With an old daemon that
+        never sends Q, depth stays 0 — the previous behaviour.
+
+        Teardown safety: _handle_client pushes a final ~0 when the daemon
+        connection closes, so piTelex's DISCON_TP_WAIT always resolves.
         """
         if self._client_sock is not None:
             now = time.monotonic()
             if now - self._last_feedback_t >= 1.0:
                 self._last_feedback_t = now
                 with self._lock:
-                    self._rx_buffer.append('\x1b~0')
+                    self._rx_buffer.append('\x1b~%d' % self._print_depth)
 
     def write(self, a, source=None):
         """Called by piTelex MCP when data arrives for this module.
