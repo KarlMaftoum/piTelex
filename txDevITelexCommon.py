@@ -263,6 +263,19 @@ class TelexITelexCommon(txBase.TelexBase):
 
         s.settimeout(0.2)
 
+        # Peer-silence supervision (line supervision, digital edition).
+        # On the historical current loop, "engaged" had to be actively
+        # maintained — a dead machine's line fell to Space, which after
+        # 800ms WAS the clearing signal (CP660 Fig. 35). TCP inverted
+        # that: an ESTAB socket holds the line for free with a dead peer.
+        # Compliant i-Telex peers send ACK/heartbeat traffic continuously
+        # (this implementation ACKs every 1s while connected), so total
+        # receive silence beyond a generous window means the peer is gone:
+        # release the line like a remote close. 0 disables.
+        last_rx = time.monotonic()
+        peer_silence_timeout = float(
+            getattr(self, 'params', {}).get('peer_silence_timeout', 90))
+
         self._connected = ST.CON_INIT
 
         # Store remote protocol version to control negotiation
@@ -371,7 +384,10 @@ class TelexITelexCommon(txBase.TelexBase):
 
             try:
                 data = s.recv(1)
-                
+                if data:
+                    # Any received byte proves the peer is alive
+                    last_rx = time.monotonic()
+
                 # piTelex terminates; close connection
                 if not self._run:
                     break
@@ -624,8 +640,18 @@ class TelexITelexCommon(txBase.TelexBase):
                             self._rx_buffer.append(a)
                             self._received_counter += 1
 
-            except socket.timeout: 
+            except socket.timeout:
                 #l.debug('.')
+                # Peer-silence release — checked in ALL phases, including
+                # auto-detect (is_ascii None), where a half-open scanner
+                # connection would otherwise hold _connected forever and
+                # occ-reject every subsequent caller.
+                if (peer_silence_timeout
+                        and time.monotonic() - last_rx > peer_silence_timeout):
+                    l.warning("Peer silent for {:.0f}s — line supervision "
+                              "release".format(time.monotonic() - last_rx))
+                    error = True   # dead pipe: skip the End packet
+                    break
                 if is_server and self.printer_start_timed_out:
                     self.printer_start_timed_out = False
                     try: # connection can be closed at this point
