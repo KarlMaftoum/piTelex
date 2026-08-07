@@ -19,7 +19,7 @@ the device in your piTelex config under "devices":
         "port": 2343
     }
 
-Companion daemon: https://github.com/KarlMaftoum/tx35exchd
+Companion daemon: tx35exchd (private for now)
 """
 
 import socket

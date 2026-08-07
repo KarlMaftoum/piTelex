@@ -2,7 +2,7 @@
 
 This is a fork of upstream [fablab-wue/piTelex](https://github.com/fablab-wue/piTelex)
 that adds a single device module, `tx35bridge`, for use with the
-[tx35exchd](https://github.com/KarlMaftoum/tx35exchd) exchange daemon.
+tx35exchd exchange daemon (companion daemon — private for now).
 
 ## What this fork adds
 
