@@ -1,7 +1,7 @@
 # txDevTx35Bridge
 
 A piTelex device module that exposes an external TCP bridge for an off-board
-exchange daemon. Designed for use with [tx35exchd](https://github.com/YOUR-USERNAME/tx35exchd),
+exchange daemon. Designed for use with [tx35exchd](https://github.com/KarlMaftoum/tx35exchd),
 which implements Australian CP660 exchange signalling for a Sagem TX35
 teleprinter on Raspberry Pi GPIO.
 

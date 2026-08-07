@@ -2,7 +2,7 @@
 
 This is a fork of upstream [fablab-wue/piTelex](https://github.com/fablab-wue/piTelex)
 that adds a single device module, `tx35bridge`, for use with the
-[tx35exchd](https://github.com/YOUR-USERNAME/tx35exchd) exchange daemon.
+[tx35exchd](https://github.com/KarlMaftoum/tx35exchd) exchange daemon.
 
 ## What this fork adds
 
@@ -16,9 +16,26 @@ See `doc/txDevTx35Bridge.md` for protocol and configuration details.
 
 ## Files changed vs upstream
 
+- `txDevTx35Bridge.py` — new device module (added).
 - `telex.py` — single `elif` branch added to `init()` to load `tx35bridge`
   when configured.
-- `txDevTx35Bridge.py` — new device module (added).
+- `txDevITelexCommon.py` — **peer-silence release** (independent of the
+  bridge, and a candidate for upstreaming): `process_connection` tracks the
+  time of the last received byte and, if a connection goes totally silent
+  for longer than `peer_silence_timeout` (device param, default 90s,
+  0 disables), releases the line via the same path as a remote close.
+
+  This restores what the physical current loop gave for free. On a real
+  telex circuit "engaged" had to be actively maintained — a dead machine's
+  line fell to Space, which after 800ms *was* the clearing signal, so a
+  faulty machine could never hold a circuit open. TCP inverted that: an
+  ESTABLISHED socket holds the line indefinitely with a peer that has
+  vanished. Observed twice in the field: a port scanner's half-open
+  connection wedged the server into `occ`-rejecting every caller for 29
+  hours, and a correspondent whose NAT silently dropped established
+  sessions left zombies that blocked his own redials. Compliant i-Telex
+  peers send Acknowledge traffic every second while connected, so total
+  silence for 90s reliably means the peer is gone.
 
 Everything else is untouched. Pulling from upstream `master` should merge
 cleanly.

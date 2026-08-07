@@ -1,5 +1,5 @@
 {
-    "_comment": "Example piTelex configuration for the tx35bridge device. Pair with the tx35exchd daemon (https://github.com/YOUR-USERNAME/tx35exchd). NOTE: leave the screen device disabled — termios fails under systemd.",
+    "_comment": "Example piTelex configuration for the tx35bridge device. Pair with the tx35exchd daemon (https://github.com/KarlMaftoum/tx35exchd). NOTE: leave the screen device disabled — termios fails under systemd.",
 
     "devices": {
         "screen": {
