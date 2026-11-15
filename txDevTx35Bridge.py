@@ -122,8 +122,12 @@ class TelexTx35Bridge(txBase.TelexBase):
 
         # ITA2 decode tables (same as standard Baudot)
         # ITA2 Baudot decode tables (must be exactly 32 chars each)
+        # International figures case: 0x11 is '+' and 0x1E is '='. These
+        # held the US variant ('"' and ';'), which encodeA2BM cannot send —
+        # '"' came out as a bare LTRS and ';' as nothing, so a '+' typed on
+        # the machine never reached the far end. 2026-11-15.
         self._ltrs = "\x00E\nA SIU\rDRJNFCKTZLWHYPQOBG\x1bMXV\x1f"
-        self._figs = '\x003\n- \'87\r\x054\x07,!:(5")2#6019?&\x1b./;\x1f'
+        self._figs = '\x003\n- \'87\r\x054\x07,!:(5+)2#6019?&\x1b./=\x1f'
 
         while self._running and self._client_sock:
             try:
