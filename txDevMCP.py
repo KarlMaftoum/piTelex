@@ -216,6 +216,15 @@ class TelexMCP(txBase.TelexBase):
                 #else:
                 #    text += '#'
                 self._rx_buffer.extend(list(text))   # send text
+                # Leave the line in LTRS. The banner's date ends in digits,
+                # so the encoder finishes in FIGS; anything that follows
+                # without restating the shift is then decoded through the
+                # figures table by the far end. The software answerback hid
+                # this by sending its own '<' (see _WRU_watchdog_callback),
+                # but a teleprinter's hardware answerback unit does not —
+                # 'GORDO AA80398' arrived as '&949 --80398'. Sent outside
+                # `text` so the banner keeps its fixed 24-character length.
+                self._rx_buffer.append('<')
                 if source == 'iTs':
                     # Send command to inform ITelexSrv that the welcome banner has
                     # been queued completely (unlocks non-command reads from
